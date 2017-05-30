@@ -9,25 +9,83 @@ storm <- function(){
         
         #-----------Q1. MOST HARMFUL TYPES OF EVENTS WITH RESPECT TO POPULATION HEALTH----------------------------------------------------------
         
-        #highest_injuries <- original_df[order(original_df$INJURIES,decreasing = TRUE),c("EVTYPE","INJURIES")] # df sorted by nr of injuries
+        highest_injuries <- original_df[order(original_df$INJURIES,decreasing = TRUE),c("EVTYPE","INJURIES")] # df sorted by nr of injuries
         
-        #highest_injuries <- summarise(group_by(highest_injuries,EVTYPE),sum(INJURIES))
+        highest_injuries <- summarise(group_by(highest_injuries,EVTYPE),sum(INJURIES))
         #print(colnames(highest_injuries))
         #print("----------------------------")
-        #colnames(highest_injuries) <- c("EVTYPE","INJURIES")
-       # highest_injuries <- highest_injuries[order(highest_injuries$INJURIES,decreasing = TRUE),]
-        #png("./Highest Injuries by Natural Event (in millions).png")
+        colnames(highest_injuries) <- c("EVTYPE","INJURIES")
+        highest_injuries <- highest_injuries[order(highest_injuries$INJURIES,decreasing = TRUE),]
+        png("./Highest Injuries by Natural Event (in millions).png")
         #barplot(highest_injuries$INJURIES, names.arg = highest_injuries$EVTYPE, col = "red", main = "Highest Injuries by Natural Event (in millions)")
-        #print(ggplot(head(highest_injuries),aes(x = reorder(EVTYPE, -INJURIES), y = INJURIES)) + geom_col(fill="red") +  xlab("Types of Events") + ylab("Injuries")
-        #      + ggtitle("Injuries Caused By Natural Event"))
-       # dev.off()
+        print(ggplot(head(highest_injuries),aes(x = reorder(EVTYPE, -INJURIES), y = INJURIES)) + geom_col(fill="red") +  xlab("Types of Events") + ylab("Injuries")
+              + ggtitle("Injuries Caused By Natural Event"))
+        dev.off()
        # highest_injuries
         
         #-------------------END OF Q1------------------------------------------------------------------------------------------------------------
         damage_columns <- grep("DMG", colnames(original_df))
         
         damages_data <- original_df[,c("EVTYPE",colnames(original_df[damage_columns]))]
-        damages_data
+        #damages_data
+        bycategory <- damages_data[damages_data$PROPDMGEXP %in% c("B","M","K"),]
+        
+        property_billions <- bycategory[bycategory$PROPDMGEXP %in% c("B"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+        
+        property_millions <- bycategory[bycategory$PROPDMGEXP %in% c("M"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+        property_thousands <- bycategory[bycategory$PROPDMGEXP %in% c("K"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+        
+        property_billions$PROPDMG <- property_billions$PROPDMG   * 1000000000
+        property_millions$PROPDMG <- property_millions$PROPDMG   * 1000000
+        property_thousands$PROPDMG <- property_thousands$PROPDMG * 1000
+        
+        total_damages_property <- rbind(property_billions,property_millions,property_thousands)
+        
+        total_damages_property <- summarise(group_by(total_damages_property,EVTYPE), sum(PROPDMG))
+        colnames(total_damages_property) <- c("EVTYPE", "PROPDMG")
+        
+        total_damages_property <- total_damages_property[order(total_damages_property$PROPDMG, decreasing = TRUE),]
+        
+        #total_damages_property
+        
+        png("./Property Damage by Natural Event.png")
+        print(ggplot(head(total_damages_property,5),aes(x = reorder(EVTYPE, -PROPDMG), y = PROPDMG)) + geom_col(fill="red") + xlab("Types of Events") + ylab("Injuries")
+                      + ggtitle("Property Damage By Natural Event") + scale_x_discrete(expand = waiver()))
+        dev.off()
+        
+        crop_billions <- bycategory[bycategory$CROPDMGEXP %in% c("B"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+        
+        crop_millions <- bycategory[bycategory$CROPDMGEXP %in% c("M"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+        crop_thousands <- bycategory[bycategory$CROPDMGEXP %in% c("K"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+        
+        crop_billions$CROPDMG <- crop_billions$CROPDMG   * 1000000000
+        crop_millions$CROPDMG <- crop_millions$CROPDMG   * 1000000
+        crop_thousands$CROPDMG <- crop_thousands$CROPDMG * 1000
+        
+        total_damages_crop <- rbind(crop_billions,crop_millions,crop_thousands)
+        
+        total_damages_crop <- summarise(group_by(total_damages_crop,EVTYPE), sum(CROPDMG))
+        colnames(total_damages_crop) <- c("EVTYPE", "CROPDMG")
+        
+        total_damages_crop <- total_damages_crop[order(total_damages_crop$CROPDMG, decreasing = TRUE),]
+        
+        total_damages_crop
+        
+        png("./Crop Damage by Natural Event.png")
+        print(ggplot(head(total_damages_crop,5),aes(x = reorder(EVTYPE, -CROPDMG), y = CROPDMG, col="red")) + geom_col(fill="red") +  xlab("Types of Events") + ylab("Injuries")
+                 + ggtitle("Crop Damage by Natural Event") + scale_x_discrete(expand = waiver()))
+        
+        dev.off()
+        
+        
+        total_damages_property
+        
+        
+        
+        
+        
+        
+        #-----------END OF PROPERTY AND CROP DAMAGES----------------
         #total_damages <- summarize(group_by (damages_data, EVTYPE),sum(PROPDMG),sum(CROPDMG),PROPDMGEXP)
         #print(colnames(total_damages))
         #head(total_damages)
@@ -63,11 +121,3 @@ storm <- function(){
         
         
 }
-
-EXTRA
-byexp <- byexp[byexp$PROPDMGEXP %in% c("B","M","K"), ]
-
-max(byexp[byexp$PROPDMGEXP %in% c("B"), ]$PROPDMG)
-max(byexp[byexp$PROPDMGEXP %in% c("M"), ]$PROPDMG)
-max(byexp[byexp$PROPDMGEXP %in% c("K"), ]$PROPDMG) 
-
