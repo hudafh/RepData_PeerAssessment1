@@ -123,41 +123,116 @@ storm <- function(){
 }
 
 
+
 ---
-title: "Natural Event Injury/Economic Damage Report"
-author: "Hugo Barros"
-date: "May 30, 2017"
-output: html_document
-        html_document:
-          keep_md: yes
----
-Synopsis:
-        We looked at data from the National Weather Service and attempted to obtain information about which Natural Events are most harmful to the population and which have the greatest economic consequences.
-        The first step was to read the data file and from then go straight to manipulating the data in order to get the natural events most harmful to the population. We assumed events harmful to the population those that cause injuries only, excluding death. For that, we identified the columns related to the types of events and injuries, extracted them, grouped and summmarised the number of injuries by event type, and finally plotted in a graph.
-        For the Natural Events that cause the most economic damages, we divided the damages in two types: Property Damages and Crop Damages. As in the previous case, we started by identifying the columns related to the two kinds of damages, the event types, and other columns that are of interest in this case. For each kind of damage we selected the event types, the property/crop damages amount, and additional columns related to degree of damage(billions/millions/thousands of dollars). Damages were grouped by event type, summarised from the highest to the lowest, and finally plotted in graphs.
----
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+ title: "Natural Event Injury/Economic Damage Report"
+ author: "Hugo Barros"
+ date: "May 30, 2017"
+ output: html_document
+         html_document:
+           keep_md: yes
+ ---
+ Synopsis:
+         We looked at data from the National Weather Service and attempted to obtain information about which Natural Events are most harmful to the population and which have the greatest economic consequences.
+         The first step was to read the data file and from then go straight to manipulating the data in order to get the natural events most harmful to the population. We assumed events harmful to the population those that cause injuries only, excluding death. For that, we identified the columns related to the types of events and injuries, extracted them, grouped and summmarised the number of injuries by event type, and finally plotted in a graph.
+         For the Natural Events that cause the most economic damages, we divided the damages in two types: Property Damages and Crop Damages. As in the previous case, we started by identifying the columns related to the two kinds of damages, the event types, and other columns that are of interest in this case. For each kind of damage we selected the event types, the property/crop damages amount, and additional columns related to degree of damage(billions/millions/thousands of dollars). Damages were grouped by event type, summarised from the highest to the lowest, and finally plotted in graphs.
+ ---
+ 
+ 
+ ```{r setup, include=FALSE}
+ knitr::opts_chunk$set(echo = TRUE)
+ ```
+ 
+ ## Data Processing
+ 
+ 1. Read data from compressed file into a data frame called "original_df"
+ ```{r}
+        original_df <- read.csv("./repdata%2Fdata%2FStormData.csv.bz2") #Reading the file data
+        original_df
+         ```    
+ 2. Find the Natural events most harmful to the population.
+ 2.1. Subset the original data frame into a smaller data frame containing only the event types and the number of injuries for each type of event
+ 
+ ```{r}
+        highest_injuries <- original_df[order(original_df$INJURIES,decreasing = TRUE),c("EVTYPE","INJURIES")] # df sorted by nr of injuries
+         
+         highest_injuries <- summarise(group_by(highest_injuries,EVTYPE),sum(INJURIES))
+         #print(colnames(highest_injuries))
+         #print("----------------------------")
+         colnames(highest_injuries) <- c("EVTYPE","INJURIES")
+         highest_injuries <- highest_injuries[order(highest_injuries$INJURIES,decreasing = TRUE),]
+         head(highest_injuries) 
+         ```
+        
+ 3. Find the Natural events with the most economic damage to property
+  3.1. Find columns with amount of damages and  of level of damages(only billions, millions,thousands)
+  3.2. Create three data frames each with a level of damages, event types and property damages
+  3.3. Multiply the damages columns with the  numerical equivalent of the level of damages. (In each of the three data frames)
+  3.4. Join the data frames into one 
+  3.5. Group the above data frame by event type and summarise the damage per event
+  3..6.Order it from highest to lowest
+ 
+ ```{r}
+       damage_columns <- grep("DMG", colnames(original_df))
+         
+         damages_data <- original_df[,c("EVTYPE",colnames(original_df[damage_columns]))]
+         #damages_data
+         bycategory <- damages_data[damages_data$PROPDMGEXP %in% c("B","M","K"),]
+         
+         property_billions <- bycategory[bycategory$PROPDMGEXP %in% c("B"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+         
+         property_millions <- bycategory[bycategory$PROPDMGEXP %in% c("M"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+         property_thousands <- bycategory[bycategory$PROPDMGEXP %in% c("K"), c("EVTYPE","PROPDMG","PROPDMGEXP")]
+         
+         property_billions$PROPDMG <- property_billions$PROPDMG   * 1000000000
+         property_millions$PROPDMG <- property_millions$PROPDMG   * 1000000
+         property_thousands$PROPDMG <- property_thousands$PROPDMG * 1000
+         
+         total_damages_property <- rbind(property_billions,property_millions,property_thousands)
+         
+         total_damages_property <- summarise(group_by(total_damages_property,EVTYPE), sum(PROPDMG))
+         colnames(total_damages_property) <- c("EVTYPE", "PROPDMG")
+         
+         total_damages_property <- total_damages_property[order(total_damages_property$PROPDMG, decreasing = TRUE),]
+          total_damages_property
+        
+        
+ ```
+ 4. Same as Step 3 but for Crop damage
+ 
+ ```{r}
+ crop_billions <- bycategory[bycategory$CROPDMGEXP %in% c("B"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+         
+         crop_millions <- bycategory[bycategory$CROPDMGEXP %in% c("M"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+         crop_thousands <- bycategory[bycategory$CROPDMGEXP %in% c("K"), c("EVTYPE","CROPDMG","CROPDMGEXP")]
+         
+         crop_billions$CROPDMG <- crop_billions$CROPDMG   * 1000000000
+         crop_millions$CROPDMG <- crop_millions$CROPDMG   * 1000000
+         crop_thousands$CROPDMG <- crop_thousands$CROPDMG * 1000
+         
+         total_damages_crop <- rbind(crop_billions,crop_millions,crop_thousands)
+         
+         total_damages_crop <- summarise(group_by(total_damages_crop,EVTYPE), sum(CROPDMG))
+         colnames(total_damages_crop) <- c("EVTYPE", "CROPDMG")
+         
+         total_damages_crop <- total_damages_crop[order(total_damages_crop$CROPDMG, decreasing = TRUE),]
+         
+         total_damages_crop
+         
+         ```
+ 
+ When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+ 
+ ```{r cars}
+ summary(cars)
+ ```
+ 
+ ## Including Plots
+ 
+ You can also embed plots, for example:
+ 
+ ```{r pressure, echo=FALSE}
+ plot(pressure)
+ ```
+ 
+ Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
